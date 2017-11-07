@@ -1,0 +1,71 @@
+import pandas as pd
+import numpy as np 
+from scipy.cluster import *
+from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+def clusterization(ClustersNumber, source_file, plot = True):
+    data = source_file.ix[:,1:2].as_matrix()
+    
+    #transition to DataFrame
+    data = pd.DataFrame(data)
+    
+    #Clear out NaNs and Infs
+    data.replace([np.inf, -np.inf], np.nan)
+    clr_data = data.dropna()
+    
+    #Arrange columns names and filter some values
+    clr_data.columns = ['Avg_resp']
+    clr_data = clr_data.query('Avg_resp > 50 ')
+    clr_data = clr_data.query('Avg_resp < 20000 ')
+    
+    #Cluster analysis
+    kmeans = KMeans(n_clusters=ClustersNumber)
+    labels = kmeans.fit_predict(clr_data)
+    centroids = kmeans.cluster_centers_
+        
+    
+    #build a chart
+    if plot:
+        fig = plt.figure(figsize=(5, 5))
+        colmap = {1: 'r', 2: 'g', 3: 'b'}
+        colors = map(lambda x: colmap[x+1], labels)
+        plt.scatter(clr_data['Avg_resp'], clr_data['Avg_money'], alpha=0.5, edgecolor='k')
+        for idx, centroid in enumerate(centroids):
+            plt.scatter(*centroid, color=colmap[idx+1])
+        plt.xlim(0, 100400)
+        plt.ylim(0, 100480)
+        plt.show()
+    
+    #Arrange result dataset
+    clr_data['Cluster']=labels
+    clr_data.insert(0,'Customer',src['E-mail'])
+    
+    #saving
+    clr_data.to_excel('Cluster_reslts.xlsx')
+    return clr_data
+    
+def PostClusterization(ClustersNumber, source_file):
+    data = source_file.ix[:,1:3].as_matrix()
+    
+    data = pd.DataFrame(data)
+    #Cluster analysis
+    kmeans = KMeans(n_clusters=ClustersNumber)
+    labels = kmeans.fit_predict(data)
+    centroids = kmeans.cluster_centers_
+       
+    
+    #Arrange result dataset
+    data.columns = ['Avg_resp','Avg_money']
+    data['Cluster'] = labels
+    
+    return data
+    
+src = pd.read_excel('Cluster.xlsx')
+for i in range(1,8):
+    print('Nr of clusters =', i)
+    arr = clusterization(i,src,plot=False)
+    for i in range(i):
+        rlt = [x for x in arr['Cluster'] if x == i]
+        print('Cluster',i+1, len(rlt))
